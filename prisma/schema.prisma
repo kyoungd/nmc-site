@@ -1,0 +1,423 @@
+// Prisma schema — Never Miss Call (LEAN v1.1, Solo-first, No-FAQ, A2P page 4)
+// DB: PostgreSQL
+// Changes vs prior draft:
+// - Removed Call + RevenueRecord + FaqItem.
+// - Kept minimal Contact (opt-out ledger) and lean Conversation/Message.
+// - Dropped revenue prompt fields from Business.
+// - Kept Employee for upgrade path (team_size_limit=1 in Business).
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ----------------
+// Enums
+// ----------------
+
+enum GlobalRole {
+  USER
+  BACKEND_ADMIN
+}
+
+enum BusinessRole {
+  OWNER
+  ADMIN
+}
+
+enum ResponderMode {
+  AI
+  HUMAN
+}
+
+enum MessageDirection {
+  IN
+  OUT
+}
+
+enum MessageMedium {
+  SMS
+}
+
+enum Sender {
+  AI
+  EMPLOYEE
+  SYSTEM
+}
+
+enum ConversationOutcome {
+  SCHEDULED
+  ABANDONED
+  ESCALATED
+  CLOSED
+}
+
+enum PhoneNumberStatus {
+  PENDING_ACTIVATION
+  ACTIVE
+  SUSPENDED
+}
+
+enum A2PStatus {
+  DRAFT
+  SUBMITTED
+  PENDING_CARRIERS
+  APPROVED
+  REJECTED
+}
+
+enum AppointmentSource {
+  AI
+  HUMAN
+}
+
+enum CalendarProvider {
+  GOOGLE
+  JOBBER
+}
+
+enum Plan {
+  FLAT
+}
+
+enum AfterHoursBehavior {
+  AIONLY
+  QUEUE_FOR_HUMAN
+  CLOSE_WITH_MSG
+}
+
+enum PriceUnit {
+  PER_JOB
+  PER_HOUR
+  PER_VISIT
+}
+
+enum DoubleBookPolicy {
+  NODOUBLE
+  ALLOW_WITH_WARN
+}
+
+// ----------------
+// Core Identities
+// ----------------
+
+model User {
+  id           String      @id @default(cuid())
+  clerkUserId  String      @unique              // Clerk.dev ID
+  email        String?     @unique
+  phone        String?
+  name         String?
+  globalRole   GlobalRole  @default(USER)
+
+  memberships  BusinessUser[]
+  employees    Employee[]
+  messages     Message[]    @relation("MessageEmployeeSender")
+
+  createdAt    DateTime    @default(now())
+  updatedAt    DateTime    @updatedAt
+}
+
+model BusinessUser {
+  id         String       @id @default(cuid())
+  business   Business     @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  businessId String
+  user       User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId     String
+  role       BusinessRole // OWNER or ADMIN
+  createdAt  DateTime     @default(now())
+  @@unique([businessId, userId])
+}
+
+model Business {
+  id                   String   @id @default(cuid())
+  displayName          String
+  legalName            String?
+  website              String?
+  email                String?
+  phone                String?
+  industry             String?
+  tz                   String                       // IANA TZ
+  brandColor           String?
+  langs                String[]                      // e.g., ["en"]
+
+  // Operating defaults
+  hours                Json                          // weekly + holidays
+  serviceAreas         Json                          // radius or zips list
+  ringWindowSec        Int       @default(20)
+  ownerWindowSec       Int       @default(60)
+  afterHoursBehavior   AfterHoursBehavior @default(AIONLY)
+  doubleBookPolicy     DoubleBookPolicy @default(NODOUBLE)
+
+  // Billing (Stripe)
+  stripeCustomerId     String?  @unique
+  stripeSubscriptionId String?
+
+  // A2P 10DLC gating
+  a2pStatus            A2PStatus    @default(DRAFT)
+  a2pBrandId           String?
+  a2pCampaignId        String?
+  a2pLastCarrierReason String?
+
+  // Solo-first enforcement
+  teamSizeLimit        Int       @default(1)
+
+  // Relationships
+  ownersAdmins         BusinessUser[]
+  employees            Employee[]
+  numbers              PhoneNumber[]
+  contacts             Contact[]
+  conversations        Conversation[]
+  appointments         Appointment[]
+  calendarAccounts     CalendarAccount[]
+  entitlement          Entitlement?
+  a2pArtifact          A2PArtifact?
+  templateSet          TemplateSet?
+  pricing              ServicePricing[]
+  onboarding           OnboardingProgress?
+
+  createdAt            DateTime   @default(now())
+  updatedAt            DateTime   @updatedAt
+}
+
+model Employee {
+  id          String    @id @default(cuid())
+  business    Business  @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  businessId  String
+  user        User?     @relation(fields: [userId], references: [id], onDelete: SetNull)
+  userId      String?
+  name        String?
+  email       String?
+  phone       String?
+  active      Boolean   @default(true)
+
+  calendarAccounts CalendarAccount[]
+  messages    Message[]  @relation("MessageEmployeeSender")
+  appointments Appointment[]
+
+  createdAt   DateTime  @default(now())
+  @@unique([businessId, userId])
+}
+
+// ----------------
+// Telephony (lean) & Conversations
+// ----------------
+
+model PhoneNumber {
+  id             String            @id @default(cuid())
+  business       Business          @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  businessId     String
+  e164           String            @unique
+  mmsCapable     Boolean           @default(true)
+  status         PhoneNumberStatus @default(PENDING_ACTIVATION)
+  twilioSid      String?           @unique
+  reservedAt     DateTime?         @default(now())
+  activatedAt    DateTime?
+  a2pCampaignId  String?
+
+  conversations  Conversation[]
+
+  @@index([businessId])
+}
+
+// Minimal per-business identity & suppression
+model Contact {
+  id          String   @id @default(cuid())
+  business    Business @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  businessId  String
+  e164        String
+  localePref  String?  // "en", "es"
+  optOutAt    DateTime?
+
+  conversations Conversation[]
+  appointments  Appointment[]
+
+  createdAt   DateTime @default(now())
+  @@unique([businessId, e164])
+  @@index([businessId])
+}
+
+model Conversation {
+  id             String         @id @default(cuid())
+  business       Business       @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  businessId     String
+
+  contact        Contact?       @relation(fields: [contactId], references: [id])
+  contactId      String?
+  phoneNumber    PhoneNumber?   @relation(fields: [phoneNumberId], references: [id])
+  phoneNumberId  String?
+
+  fromE164       String         // caller at time of conversation
+  toE164         String         // business number used
+
+  initialCallSid String?        // Twilio Call SID for missed call (if any)
+  initialCallAt  DateTime?
+  initialCallStatus String?     // "missed"/"answered"/"voicemail"
+
+  openedAt       DateTime       @default(now())
+  closedAt       DateTime?
+  responderMode  ResponderMode  @default(AI)
+  outcome        ConversationOutcome?
+
+  metadata       Json?          // provider breadcrumbs
+
+  messages       Message[]
+
+  @@index([businessId, openedAt])
+  @@index([businessId, fromE164])
+}
+
+model Message {
+  id               String           @id @default(cuid())
+  conversation     Conversation     @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  conversationId   String
+  direction        MessageDirection
+  medium           MessageMedium    @default(SMS)
+  text             String
+  lang             String?
+  sender           Sender           @default(SYSTEM)
+  employee         Employee?        @relation("MessageEmployeeSender", fields: [employeeId], references: [id])
+  employeeId       String?
+  user             User?            @relation("MessageEmployeeSender", fields: [userId], references: [id])
+  userId           String?
+
+  providerSid      String?          // Twilio Message SID
+  carrierStatus    String?
+  carrierErrorCode String?
+  deliveredAt      DateTime?
+
+  createdAt        DateTime         @default(now())
+
+  @@index([conversationId, createdAt])
+  @@index([providerSid])
+}
+
+// ----------------
+// Scheduling
+// ----------------
+
+model CalendarAccount {
+  id                String           @id @default(cuid())
+  business          Business         @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  businessId        String
+  employee          Employee         @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+  employeeId        String
+  provider          CalendarProvider
+  externalAccountId String
+  scopes            String[]
+  refreshTokenRef   String?          // ref to secrets store
+
+  createdAt         DateTime         @default(now())
+  updatedAt         DateTime         @updatedAt
+  @@index([businessId, employeeId])
+}
+
+model Appointment {
+  id            String            @id @default(cuid())
+  business      Business          @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  businessId    String
+  contact       Contact?          @relation(fields: [contactId], references: [id])
+  contactId     String?
+  employee      Employee?         @relation(fields: [employeeId], references: [id], onDelete: SetNull)
+  employeeId    String?
+  start         DateTime
+  end           DateTime
+  source        AppointmentSource  @default(AI)
+  externalId    String?
+
+  createdAt     DateTime           @default(now())
+  updatedAt     DateTime           @updatedAt
+  @@index([businessId, start])
+}
+
+// ----------------
+// Billing & Entitlements
+// ----------------
+
+model Entitlement {
+  id         String  @id @default(cuid())
+  business   Business @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  businessId String   @unique
+  plan       Plan     @default(FLAT)
+  active     Boolean  @default(true)
+  limitsJson Json     @default("{}")
+
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+}
+
+// ----------------
+// A2P 10DLC Registration Bundle
+// ----------------
+
+model A2PArtifact {
+  id              String    @id @default(cuid())
+  business        Business  @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  businessId      String    @unique
+
+  brandLegalName  String
+  ein             String
+  website         String
+  contactName     String
+  contactEmail    String
+  contactPhone    String
+  useCase         String    @default("CUSTOMER_CARE")
+  sampleMessages  Json      // includes STOP/HELP
+
+  status          A2PStatus @default(SUBMITTED)
+  brandId         String?
+  campaignId      String?
+  carrierReason   String?
+  submittedAt     DateTime? @default(now())
+  approvedAt      DateTime?
+  rejectedAt      DateTime?
+}
+
+// ----------------
+// Content & Config
+// ----------------
+
+model TemplateSet {
+  id                 String   @id @default(cuid())
+  business           Business @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  businessId         String   @unique
+
+  instantTextBack    String
+  schedulingPrompt   String
+  confirmation       String
+  cancellation       String
+  humanTakeover      String
+  stopHelp           String
+  linkPageBrandUrl   String?
+
+  updatedAt          DateTime @updatedAt
+}
+
+model ServicePricing {
+  id          String    @id @default(cuid())
+  business    Business  @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  businessId  String
+  name        String
+  minPrice    Decimal   @db.Decimal(10,2)
+  maxPrice    Decimal   @db.Decimal(10,2)
+  unit        PriceUnit @default(PER_JOB)
+  notes       String?
+
+  @@index([businessId, name])
+}
+
+model OnboardingProgress {
+  id            String   @id @default(cuid())
+  business      Business @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  businessId    String   @unique
+  wizardVersion Int      @default(2) // 4-page A2P-gated
+  page1Critical Boolean  @default(false)
+  page2Critical Boolean  @default(false)
+  page3Critical Boolean  @default(false)
+  page4Critical Boolean  @default(false)
+  lastStep      String?
+  updatedAt     DateTime @updatedAt
+}
