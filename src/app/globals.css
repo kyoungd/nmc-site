@@ -2,6 +2,8 @@
 @tailwind components;
 @tailwind utilities;
 
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
+
 @layer base {
   :root {
     --background: 0 0% 100%;
@@ -60,6 +62,36 @@
 }
 
 @layer components {
+  /* Custom NeverMissCall styles */
+  .btn-primary {
+    @apply inline-flex items-center justify-center rounded-lg px-6 py-4 font-semibold text-white bg-primary shadow-sm hover:bg-primary/90 transition-colors duration-200 border-0 cursor-pointer no-underline;
+  }
+
+  .btn-secondary {
+    @apply inline-flex items-center justify-center rounded-lg px-6 py-4 font-semibold text-primary bg-white border-2 border-primary hover:bg-primary hover:text-white transition-all duration-200 no-underline;
+  }
+
+  .bg-light {
+    @apply bg-gray-50;
+  }
+
+  .text-accent {
+    @apply text-gray-600;
+  }
+
+  .demo-card {
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+  }
+
+  .demo-card:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 10px 25px rgba(0,0,0,0.15);
+  }
+
+  .gradient-bg {
+    background: linear-gradient(135deg, hsl(var(--primary)) 0%, hsl(var(--accent)) 100%);
+  }
+
   /* Custom scrollbar */
   .scrollbar-thin {
     scrollbar-width: thin;

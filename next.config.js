@@ -1,12 +1,5 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  experimental: {
-    appDir: true,
-  },
-  typescript: {
-    // Enable TypeScript strict mode
-    tsconfigPath: './tsconfig.json',
-  },
   eslint: {
     // Run ESLint during build
     ignoreDuringBuilds: false,
