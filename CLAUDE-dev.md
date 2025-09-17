@@ -8,10 +8,13 @@
 5. **Review**: Add summary section to todo.md
 
 Rules of engagement (for your coding AI)
-1. Acceptance before code State pass/fail criteria in bullets. If the code doesn’t meet them, the AI must iterate.
-2. No provider I/O in render Repeat this in every prompt. Server actions only; mocks in tests.
-3. Basic-only gating Advanced never blocks. Enforce this in guards and in every step prompt.
-4. All actions return exactly: { phase: 'pending|processing|success|error', completion: 0-100, message: string, metadata: {} }
+1. Freeze invariants up front Always prepend the Overview Peg and keep file paths + return shapes unchanged. Bump SPEC_VERSION only when you truly change a contract.
+2. One intent per turn Each prompt must target exactly one file or one tiny slice (≤300 LOC). No “while you’re here, also…” baggage.
+3. Small diffs, or it didn’t happen For changes, ask for patch-style output: “only touch <path>; do not modify any other files.”
+4. Acceptance before code State pass/fail criteria in bullets. If the code doesn’t meet them, the AI must iterate.
+5. No provider I/O in render Repeat this in every prompt. Server actions only; mocks in tests.
+6. Basic-only gating Advanced never blocks. Enforce this in guards and in every step prompt.
+7. All actions return exactly: { phase: 'pending|processing|success|error', completion: 0-100, message: string, metadata: {} }
 
 ## Before ANY Change
 - Exists already? → Search & reuse
@@ -33,6 +36,7 @@ Rules of engagement (for your coding AI)
 
 ## technology
 Next.js
+javascript
 tailwind.css
 shadcn/ui
 clerk.dev

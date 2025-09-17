@@ -1,0 +1,3 @@
+Give me a concise instruction for LLM (claude sonnet 4 or OpenAI o3).  I do not need detail information as the AI will figure that out.  Just the high level, like the API and parameters passed back and forth.  Let's go with single provider.  Two steps.  1.  Generate code.  2.  Generate Test codes.
+
+We need to be aware of output token limit as well as input token limit.  Lean Production with single provider (twilio).   Maybe do it in two steps if possible.  3,500-4500 LOC is a bit too much for LLM.
