@@ -1,127 +1,36 @@
-# NeverMissCall Web Dashboard
+This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://github.com/vercel/next.js/tree/canary/packages/create-next-app).
 
-A modern, responsive web dashboard for managing call operations and customer interactions. Built with React, Next.js, and TypeScript.
+## Getting Started
 
-## Quick Start
-
-1. **Install dependencies**
-   ```bash
-   pnpm install
-   ```
-
-2. **Set up environment**
-   ```bash
-   cp .env.example .env.local
-   # Edit .env.local with your API endpoints
-   ```
-
-3. **Start development server**
-   ```bash
-   pnpm dev
-   ```
-
-4. **Open your browser**
-   Navigate to [http://localhost:3000](http://localhost:3000)
-
-## Demo Credentials
-
-For testing purposes:
-- **Email:** demo@nevermisscall.com
-- **Password:** demo123
-
-## Features
-
-- 📞 **Real-time Call Monitoring** - Live call status and management
-- 💬 **Conversation Management** - Handle customer conversations with AI takeover
-- 📊 **Analytics Dashboard** - Comprehensive call and conversation analytics  
-- ⚙️ **Settings Management** - User profiles, notifications, and preferences
-- 🌙 **Dark/Light Theme** - Customizable appearance with system sync
-- 📱 **Responsive Design** - Works seamlessly on desktop and mobile
-- 🔔 **Real-time Notifications** - Live updates via WebSocket connections
-
-## Technology Stack
-
-- **Framework:** Next.js 14 with App Router
-- **UI Library:** React 18 with TypeScript
-- **Styling:** Tailwind CSS + shadcn/ui components
-- **State Management:** Zustand
-- **Real-time:** Socket.IO
-- **Forms:** React Hook Form + Zod validation
-- **Testing:** Jest + React Testing Library
-
-## API Integration
-
-Connects to NeverMissCall microservices:
-- Authentication Service (port 3301)
-- Call Service (port 3304) 
-- Tenant Service (port 3302)
-- User Service (port 3303)
-- Phone Number Service (port 3501)
-- Connection Service (port 3105) - WebSocket
-
-## Development
+First, run the development server:
 
 ```bash
-# Development server
+npm run dev
+# or
+yarn dev
+# or
 pnpm dev
-
-# Production build
-pnpm build
-
-# Run tests
-pnpm test
-
-# Lint code
-pnpm lint
-
-# Type checking
-pnpm type-check
+# or
+bun dev
 ```
 
-## Project Structure
+Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
 
-```
-src/
-├── app/                 # Next.js pages and layouts
-├── components/          # Reusable React components
-├── lib/                # Utilities and configurations
-├── store/              # Zustand state management
-├── types/              # TypeScript definitions
-└── hooks/              # Custom React hooks
-```
+You can start editing the page by modifying `app/page.js`. The page auto-updates as you edit the file.
 
-## Documentation
+This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
 
-See [CLAUDE.md](./CLAUDE.md) for detailed technical documentation including:
-- Complete architecture overview
-- API integration patterns
-- Component structure
-- State management patterns
-- Security considerations
-- Deployment instructions
+## Learn More
 
-## Environment Variables
+To learn more about Next.js, take a look at the following resources:
 
-Key environment variables needed:
+- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
+- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
 
-```env
-NEXT_PUBLIC_AUTH_API_URL=http://localhost:3301
-NEXT_PUBLIC_CALL_API_URL=http://localhost:3304
-NEXT_PUBLIC_SOCKET_URL=http://localhost:3105
-NEXTAUTH_SECRET=your-secret-key
-JWT_SECRET=your-jwt-secret
-```
+You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
 
-See `.env.example` for the complete list.
+## Deploy on Vercel
 
-## Contributing
+The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
 
-1. Follow TypeScript strict mode
-2. Use existing component patterns
-3. Add tests for new features
-4. Ensure accessibility compliance
-5. Update documentation for significant changes
-
-## License
-
-Part of the NeverMissCall platform. All rights reserved.
+Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
